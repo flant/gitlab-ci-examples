@@ -1,0 +1,98 @@
+stages:
+  - build
+  - testing
+  - staging
+  - preprod
+  - approve
+  - production
+
+
+## build stage
+
+build:
+  stage: build
+  tags: [deploy]
+  script:
+    - echo "Build"
+
+
+## testing stage
+
+test unit:
+  stage: testing
+  tags: [deploy]
+  script:
+    - echo "test unit"
+
+test integration:
+  stage: testing
+  tags: [deploy]
+  script:
+    - echo "test integration"
+
+test selenium:
+  stage: testing
+  tags: [deploy]
+  script:
+    - echo "test selenium"
+
+## staging stage
+
+
+.staging-deploy: &staging-deploy
+  tags: [deploy]
+  stage: staging
+  when: manual
+  script:
+    - echo $CI_BUILD_NAME
+
+
+deploy to dev-1:
+  <<: *staging-deploy
+
+deploy to dev-2:
+  <<: *staging-deploy
+
+deploy to devops-1:
+  <<: *staging-deploy
+
+deploy to devops-2:
+  <<: *staging-deploy
+
+deploy to qa-1:
+  <<: *staging-deploy
+
+deploy to qa-2:
+  <<: *staging-deploy
+
+
+## preprod stage
+
+deploy to preprod:
+  stage: preprod
+  tags: [deploy]
+  script:
+    - echo "deploy to preprod"
+
+
+## approve stage
+
+approve:
+  stage: approve
+  tags: [deploy]
+  script:
+    - echo "APPROVED"
+
+NOT approve:
+  stage: approve
+  tags: [deploy]
+  script:
+    - echo "NOT APPROVED"
+
+## production stage
+
+deploy to production:
+  stage: production
+  tags: [deploy]
+  script:
+    - echo "deploy to production!"
