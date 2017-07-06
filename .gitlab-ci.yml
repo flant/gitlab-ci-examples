@@ -13,7 +13,11 @@ build:
   stage: build
   tags: [deploy]
   script:
+    - mkdir .ci_status
     - echo "Build"
+  artifacts:
+    paths:
+      - .ci_status/
 
 
 ## testing stage
@@ -83,14 +87,22 @@ approve:
   tags: [deploy]
   when: manual
   script:
-    - echo "APPROVED"
+    - mkdir -p .ci_status
+    - echo $(date +%s) > .ci_status/approved
+  artifacts:
+    paths:
+      - .ci_status/
 
 NOT approve:
   stage: approve
   tags: [deploy]
   when: manual
   script:
-    - echo "NOT APPROVED"
+    - mkdir -p .ci_status
+    - echo $(date +%s) > .ci_status/not_approved
+  artifacts:
+    paths:
+      - .ci_status/
 
 ## production stage
 
@@ -99,4 +111,6 @@ deploy to production:
   tags: [deploy]
   when: manual
   script:
+    - if [[ $(cat .ci_status/not_approved) > $(cat .ci_status/approved) ]]; then echo "Нужно разрешение от релиз-инженера"; exit 1; fi
     - echo "deploy to production!"
+
