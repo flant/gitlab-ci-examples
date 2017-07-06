@@ -6,12 +6,19 @@ stages:
   - approve
   - production
 
+.testing-staging-only: &testing-staging-only
+  only:
+    - tags
+    - /^feature_.*$/
+    - /^infra_.*$/
+
 
 ## build stage
 
 build:
   stage: build
   tags: [deploy]
+  <<: *testing-staging-only
   script:
     - echo "Build"
 
@@ -21,18 +28,21 @@ build:
 test unit:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
     - echo "test unit"
 
 test integration:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
     - echo "test integration"
 
 test selenium:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
     - echo "test selenium"
 
@@ -42,6 +52,7 @@ test selenium:
 .staging-deploy: &staging-deploy
   tags: [deploy]
   stage: staging
+  <<: *testing-staging-only
   when: manual
   script:
     - echo $CI_BUILD_NAME
@@ -71,6 +82,7 @@ deploy to qa-2:
 deploy to preprod:
   stage: preprod
   tags: [deploy]
+  <<: *testing-staging-only
   script:
     - echo "deploy to preprod"
 
@@ -80,12 +92,14 @@ deploy to preprod:
 approve:
   stage: approve
   tags: [deploy]
+  only: [tags]
   script:
     - echo "APPROVED"
 
 NOT approve:
   stage: approve
   tags: [deploy]
+  only: [tags]
   script:
     - echo "NOT APPROVED"
 
@@ -94,5 +108,6 @@ NOT approve:
 deploy to production:
   stage: production
   tags: [deploy]
+  only: [tags]
   script:
     - echo "deploy to production!"
