@@ -71,6 +71,7 @@ deploy to qa-2:
 deploy to preprod:
   stage: preprod
   tags: [deploy]
+  when: manual
   script:
     - echo "deploy to preprod"
 
@@ -80,12 +81,14 @@ deploy to preprod:
 approve:
   stage: approve
   tags: [deploy]
+  when: manual
   script:
     - echo "APPROVED"
 
 NOT approve:
   stage: approve
   tags: [deploy]
+  when: manual
   script:
     - echo "NOT APPROVED"
 
@@ -94,5 +97,6 @@ NOT approve:
 deploy to production:
   stage: production
   tags: [deploy]
+  when: manual
   script:
     - echo "deploy to production!"
