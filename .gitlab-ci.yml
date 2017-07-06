@@ -7,13 +7,34 @@ stages:
   - production
 
 
+# задачи на стадиях build, testing, staging, pre-prod
+#  могут выполняться из тэгов и веток infra_ и feature_
+.testing-staging-only: &testing-staging-only
+  only:
+    - tags
+    - /^feature_.*$/
+    - /^infra_.*$/
+
+# задачи на стадиях approve И production
+# можно выполнять только из тэгов
+.prod-only: &prod-only
+  only:
+    - tags
+
+
 ## build stage
 
 build:
   stage: build
   tags: [deploy]
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status
     - echo "Build"
+    - touch .ci_status/build_success
+  artifacts:
+    paths:
+      - .ci_status/
 
 
 ## testing stage
@@ -21,49 +42,86 @@ build:
 test unit:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status
+    - if [ ! -e .ci_status/build_success ]; then echo "Нужна успешная сборка!"; exit 1 ; fi
     - echo "test unit"
+    - touch .ci_status/test_unit
+  artifacts:
+    paths:
+      - .ci_status/
 
 test integration:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status
     - echo "test integration"
+    - touch .ci_status/test_integration
+  artifacts:
+    paths:
+      - .ci_status/
 
 test selenium:
   stage: testing
   tags: [deploy]
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status
     - echo "test selenium"
+    - touch .ci_status/test_selenium
+  artifacts:
+    paths:
+      - .ci_status/
+
 
 ## staging stage
-
 
 .staging-deploy: &staging-deploy
   tags: [deploy]
   stage: staging
   when: manual
+  artifacts:
+    paths:
+      - .ci_status/
+
+.staging-deploy-common: &staging-deploy-common
+  <<: *staging-deploy
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status/
     - echo $CI_BUILD_NAME
+    - touch .ci_status/staging-deploy-success
+
+.staging-deploy-qa: &staging-deploy-qa
+  <<: *staging-deploy
+  <<: *testing-staging-only
+  script:
+    - mkdir -p .ci_status/
+    - if [ ! -e .ci_status/test_unit -o ! -e .ci_status/test_integration -o ! -e .ci_status/test_selenium ]; then echo "Нужно успешное выполнение всех тестов"; exit 1; fi
+    - echo "execute job ${CI_BUILD_NAME}"
+    - touch .ci_status/staging-deploy-success
 
 
 deploy to dev-1:
-  <<: *staging-deploy
+  <<: *staging-deploy-common
 
 deploy to dev-2:
-  <<: *staging-deploy
+  <<: *staging-deploy-common
 
 deploy to devops-1:
-  <<: *staging-deploy
+  <<: *staging-deploy-common
 
 deploy to devops-2:
-  <<: *staging-deploy
+  <<: *staging-deploy-common
 
 deploy to qa-1:
-  <<: *staging-deploy
+  <<: *staging-deploy-qa
 
 deploy to qa-2:
-  <<: *staging-deploy
+  <<: *staging-deploy-qa
 
 
 ## preprod stage
@@ -72,8 +130,14 @@ deploy to preprod:
   stage: preprod
   tags: [deploy]
   when: manual
+  <<: *testing-staging-only
   script:
+    - mkdir -p .ci_status/
+    - if [ ! -e .ci_status/staging-deploy-success ]; then echo "Нужно развёртывание на контуре staging"; exit 1 ; fi
     - echo "deploy to preprod"
+  artifacts:
+    paths:
+      - .ci_status/
 
 
 ## approve stage
@@ -82,15 +146,25 @@ approve:
   stage: approve
   tags: [deploy]
   when: manual
+  <<: *prod-only
   script:
-    - echo "APPROVED"
+    - mkdir -p .ci_status
+    - echo $(date +%s) > .ci_status/approved
+  artifacts:
+    paths:
+      - .ci_status/
 
 NOT approve:
   stage: approve
   tags: [deploy]
   when: manual
+  <<: *prod-only
   script:
-    - echo "NOT APPROVED"
+    - mkdir -p .ci_status
+    - echo $(date +%s) > .ci_status/not_approved
+  artifacts:
+    paths:
+      - .ci_status/
 
 ## production stage
 
@@ -98,5 +172,8 @@ deploy to production:
   stage: production
   tags: [deploy]
   when: manual
+  <<: *prod-only
   script:
+    - if [[ $(cat .ci_status/not_approved) > $(cat .ci_status/approved) ]]; then echo "Нужно разрешение от релиз-инженера"; exit 1; fi
     - echo "deploy to production!"
+
